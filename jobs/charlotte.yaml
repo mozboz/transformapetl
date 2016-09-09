@@ -1,0 +1,17 @@
+---
+definition: Public Art in Charlotte, NC
+file_url: http://clt.charlotte.opendata.arcgis.com/datasets/f86744fe094640daaebd047522243a24_0.geojson
+owner: US Government
+schema:
+    Artist:
+        description: Creator of work
+        name: Artist
+        type: Text
+    CategoryMainType:
+        description: The type of work
+        name: Type
+        type: Text
+    TitleOfWork:
+        description: The title of the work
+        name: Title
+        type: Text
