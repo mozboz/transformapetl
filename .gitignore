@@ -35,3 +35,6 @@ venv
 
 # Log files
 .log
+
+# Data
+data/*
