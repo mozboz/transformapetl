@@ -32,3 +32,6 @@ transformap.conf
 
 # Virtual env
 venv
+
+# Log files
+.log
