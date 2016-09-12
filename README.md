@@ -8,5 +8,5 @@ cp transformap.example.conf transformap.conf [+ add database credentials]
 
 2. Usage
 
-python transformap.py jobs/charlotte.yaml
+python transformap.py -i jobs/charlotte.yaml
 
