@@ -30,14 +30,16 @@ class TMJob(object):
 
 class Extractor(TMJob):
 
-    def fetch_via_http(self):
+    def run(self):
+        
+        file_url = self.config.get('file_url')
+        return self.fetch_via_http(file_url)
+
+    def fetch_via_http(self, file_url):
     
         '''
         Fetch a file via HTTP and save it to data dir.
         '''
-        
-        # Get file url from job config
-        file_url = self.config.get('file_url')
         
         geojson_file = urllib.URLopener()
         file_name = '%s' % file_url.strip('/').split('/')[-1]
@@ -51,13 +53,13 @@ class Extractor(TMJob):
 
 
 class Transformer(TMJob):
-
-    def __init__(self, job_file, extractor_response):
+        
+    def run(self, extractor_response):
     
-        self.file_name = extractor_response.get('file_name')
-        super(Transformer, self).__init__(job_file)
+        file_name = extractor_response.get('file_name')
+        return self.transform_geojson(file_name)
     
-    def transform_geojson(self):
+    def transform_geojson(self, file_name):
     
         '''
         Transform map data in file according to schema.
@@ -70,7 +72,7 @@ class Transformer(TMJob):
         transformed_data = []
         
         # Open source file
-        with open('data/%s' % self.file_name) as f:
+        with open('data/%s' % file_name) as f:
             data = json.load(f)
         
         # Transform each row
@@ -89,25 +91,25 @@ class Transformer(TMJob):
         
         return {
             'map_data' : transformed_data,
-            'file_name' : self.file_name,
+            'file_name' : file_name,
         }
 
 
 class Loader(TMJob):
-
-    def __init__(self, job_file, transformer_response):
-    
-        self.map_data = transformer_response.get('map_data')
-        self.file_name = transformer_response.get('file_name')
-        super(Loader, self).__init__(job_file)
-
-    def save_map(self):
-    
-        '''
-        Initialise map instance and save data to database.
-        '''
         
-        new_map = self.initialise_map()
+    def run(self, transformer_response):
+        
+        map_data = transformer_response.get('map_data')
+        file_name = transformer_response.get('file_name')
+        
+        new_map = self.initialise_map(file_name)
+        self.save_map(new_map, map_data)
+
+    def save_map(self, new_map, map_data):
+    
+        '''
+        Save data to database.
+        '''
         
         # Fetch schema for this map instance from DB
         map_schema = {}
@@ -119,7 +121,7 @@ class Loader(TMJob):
             
         # Save data to db
         logger.info("Saving map data to database")
-        for row in self.map_data:
+        for row in map_data:
             
             # save map object
             map_object = orm.MapObject(
@@ -144,7 +146,7 @@ class Loader(TMJob):
                     
         logger.info("Done!")
         
-    def initialise_map(self):
+    def initialise_map(self, file_name):
     
         ''' 
         Save new map instance metadata to database as needed.
@@ -183,7 +185,7 @@ class Loader(TMJob):
             schema = schema,
             map_definition = map_definition,
             retrieval_date = datetime.now(),
-            source_path = 'data/%s' % self.file_name,
+            source_path = 'data/%s' % file_name,
         )
         
         # Schema Fields
@@ -220,17 +222,19 @@ if __name__ == "__main__":
     logging.config.fileConfig("logging.conf")
     logger = logging.getLogger("Transformap")
     
+    job_config = results.input_file
+    
     # Fetch and save file
-    EX = Extractor(results.input_file)
-    extractor_response = EX.fetch_via_http()
+    EX = Extractor(job_config)
+    extractor_response = EX.run()
     
     # Transform data
-    TR = Transformer(results.input_file, extractor_response)
-    transformer_response = TR.transform_geojson()
+    TR = Transformer(job_config)
+    transformer_response = TR.run(extractor_response)
     
     # Load data into database
-    LD = Loader(results.input_file, transformer_response)
-    LD.save_map()
+    LD = Loader(job_config)
+    LD.run(transformer_response)
     
     
     
