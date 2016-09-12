@@ -34,7 +34,7 @@ transformap.conf
 venv
 
 # Log files
-.log
+*.log
 
 # Data
 data/*

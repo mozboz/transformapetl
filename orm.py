@@ -76,6 +76,7 @@ class MapInstance(Base, object):
 class MapObject(Base, object):
     __tablename__ = 'map_object'
     id = Column(Integer, primary_key=True)
+    guid = Column(Integer)
     map_instance_id = Column(Integer, ForeignKey('map_instances.id'), nullable=False)
     map_instance = relationship('MapInstance')
     longitude = Column(Numeric(14,10))
@@ -84,7 +85,6 @@ class MapObject(Base, object):
 class MapData(Base, object):
     __tablename__ = 'map_data'
     id = Column(Integer, primary_key=True)
-    guid = Column(Integer)
     map_instance_id = Column(Integer, ForeignKey('map_instances.id'), nullable=False)
     map_instance = relationship('MapInstance')
     map_object_id = Column(Integer, ForeignKey('map_object.id'), nullable=False)
