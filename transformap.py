@@ -13,46 +13,61 @@ from datetime import datetime
 
 import orm
 
-class TransforMap():
+
+
+class TMJob(object):
 
     def __init__(self, job_file):
-    
-        # Set up logging
-        logging.config.fileConfig("logging.conf")
-        self.logger = logging.getLogger("Transformap")
         
         # Set up database connection
         self.session = orm.db_connect()
         
         # Load YAML map config file
+        # Job config is stored in self.config
         with open(job_file, 'r') as f:
-            self.map_config = yaml.load(f)
-        
-    def fetch_http(self):
+            self.config = yaml.load(f)
+
+
+class Extractor(TMJob):
+
+    def fetch_via_http(self):
     
         '''
         Fetch a file via HTTP and save it to data dir.
         '''
         
-        file_url = self.map_config.get('file_url')
+        # Get file url from job config
+        file_url = self.config.get('file_url')
+        
         geojson_file = urllib.URLopener()
         file_name = '%s' % file_url.strip('/').split('/')[-1]
-        self.logger.info("Retrieving file %s" % file_name)
-        geojson_file.retrieve(file_url, 'data/%s' % file_name)
-        self.file_name = file_name
         
-    def transform_data(self):
+        logger.info("Retrieving file %s" % file_name)
+        geojson_file.retrieve(file_url, 'data/%s' % file_name)
+        
+        return {
+            'file_name' : file_name
+        }
+
+
+class Transformer(TMJob):
+
+    def __init__(self, job_file, extractor_response):
+    
+        self.file_name = extractor_response.get('file_name')
+        super(Transformer, self).__init__(job_file)
+    
+    def transform_geojson(self):
     
         '''
-        Apply transformation to fields based on schema, 
-        return transformed data array.
+        Transform map data in file according to schema.
         '''
-        
-        self.logger.info("Transforming data according to schema")
+    
+        logger.info("Transforming data according to schema")
         
         # Get schema
-        schema = self.map_config.get('schema')
-        self.transformed_data = []
+        schema = self.config.get('schema')
+        transformed_data = []
         
         # Open source file
         with open('data/%s' % self.file_name) as f:
@@ -70,33 +85,47 @@ class TransforMap():
                 else:
                     new_field_name = schema[field].get('name')
                     new_row[new_field_name] = value 
-            self.transformed_data.append(new_row)
+            transformed_data.append(new_row)
+        
+        return {
+            'map_data' : transformed_data,
+            'file_name' : self.file_name,
+        }
+
+
+class Loader(TMJob):
+
+    def __init__(self, job_file, transformer_response):
+    
+        self.map_data = transformer_response.get('map_data')
+        self.file_name = transformer_response.get('file_name')
+        super(Loader, self).__init__(job_file)
 
     def save_map(self):
     
         '''
-        Initialise the map instance and save data to the database.
+        Initialise map instance and save data to database.
         '''
         
-        self.initialise_map()
-            
+        new_map = self.initialise_map()
+        
         # Fetch schema for this map instance from DB
         map_schema = {}
-        schema = self.session.query(orm.SchemaField).filter_by(schema_id=self.schema.id).all()
+        schema = self.session.query(orm.SchemaField).filter_by(schema_id=new_map['map_schema'].id).all()
         for schema_field in schema:
             field_name = schema_field.field_name
             field_id = schema_field.id
             map_schema[field_name] = field_id
             
         # Save data to db
-        self.logger.info("Saving map data to database")
-        for row in self.transformed_data:
+        logger.info("Saving map data to database")
+        for row in self.map_data:
             
             # save map object
             map_object = orm.MapObject(
                 longitude = row.get('longitude'),
                 latitude = row.get('latitude'),
-                map_instance = self.map_instance,
+                map_instance = new_map['map_instance'],
             )
             self.session.add(map_object)
             self.session.commit()
@@ -105,7 +134,7 @@ class TransforMap():
             for field, value in row.items():
                 if field not in ('latitude', 'longitude'):            
                     new_row = orm.MapData(
-                        map_instance = self.map_instance,
+                        map_instance = new_map['map_instance'],
                         map_object = map_object,
                         schema_field_id = map_schema[field],
                         field_value = value,
@@ -113,9 +142,7 @@ class TransforMap():
                     self.session.add(new_row)
                     self.session.commit()
                     
-    """ 
-    HELPERS 
-    """
+        logger.info("Done!")
         
     def initialise_map(self):
     
@@ -123,49 +150,45 @@ class TransforMap():
         Save new map instance metadata to database as needed.
         '''
         
-        map_config = self.map_config
-        
         # Map Owner (if necessary)
-        map_owner = self.session.query(orm.MapOwner).filter_by(name=map_config.get('owner')).first()
+        map_owner = self.session.query(orm.MapOwner).filter_by(name=self.config.get('owner')).first()
         
         if not map_owner:
-            self.logger.info("Saving new map owner %s" % map_config.get('owner'))
-            map_owner = orm.MapOwner(name=map_config.get('owner'))
+            logger.info("Saving new map owner %s" % self.config.get('owner'))
+            map_owner = orm.MapOwner(name=self.config.get('owner'))
             self.session.add(map_owner)
             
         # Map Definition (if necessary)
-        map_definition = self.session.query(orm.MapDefinition).filter_by(name=map_config.get('definition')).first()
+        map_definition = self.session.query(orm.MapDefinition).filter_by(name=self.config.get('definition')).first()
         
         if not map_definition:
-            self.logger.info("Saving new map definition %s" % map_config.get('definition'))
+            logger.info("Saving new map definition %s" % self.config.get('definition'))
             map_definition = orm.MapDefinition(
-                name=map_config.get('definition'),
+                name=self.config.get('definition'),
                 owner=map_owner,
             )
             self.session.add(map_definition)
             
         # Schema Version
-        self.logger.info("Saving new schema version")
+        logger.info("Saving schema version")
         schema = orm.SchemaVersion(
             map_definition = map_definition,
             map_owner = map_owner
         )
         self.session.add(map_definition)
-        self.schema = schema
         
         # Map Instance
-        self.logger.info("Saving map instance")
+        logger.info("Saving map instance")
         map_instance = orm.MapInstance(
             schema = schema,
             map_definition = map_definition,
             retrieval_date = datetime.now(),
             source_path = 'data/%s' % self.file_name,
         )
-        self.map_instance = map_instance
         
         # Schema Fields
-        self.logger.info("Saving schema fields")
-        for field, field_meta in map_config.get('schema', {}).items():
+        logger.info("Saving schema fields")
+        for field, field_meta in self.config.get('schema', {}).items():
             new_field = orm.SchemaField(
                 is_base_field = False,
                 schema = schema,
@@ -178,6 +201,11 @@ class TransforMap():
         # Commit to database
         self.session.commit()
         
+        return {
+            'map_instance' : map_instance,
+            'map_schema' : schema,
+        }
+            
 
 # Run ETL process
 
@@ -188,10 +216,26 @@ if __name__ == "__main__":
 
     results = parser.parse_args()
     
-    TM = TransforMap(results.input_file)
-    TM.fetch_http()
-    TM.transform_data()
-    TM.save_map()
+    # Set up logging
+    logging.config.fileConfig("logging.conf")
+    logger = logging.getLogger("Transformap")
+    
+    # Fetch and save file
+    EX = Extractor(results.input_file)
+    extractor_response = EX.fetch_via_http()
+    
+    # Transform data
+    TR = Transformer(results.input_file, extractor_response)
+    transformer_response = TR.transform_geojson()
+    
+    # Load data into database
+    LD = Loader(results.input_file, transformer_response)
+    LD.save_map()
+    
+    
+    
+    
+    
 
 
     
