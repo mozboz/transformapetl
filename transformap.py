@@ -12,28 +12,30 @@ from sqlalchemy import exists
 from datetime import datetime
 
 import orm
+import sys
 
 
 
 class TMJob(object):
 
-    def __init__(self, job_file):
+    def __init__(self, module_config):
         
         # Set up database connection
         self.session = orm.db_connect()
-        
-        # Load YAML map config file
-        # Job config is stored in self.config
-        with open(job_file, 'r') as f:
-            self.config = yaml.load(f)
+        self.config = module_config
 
 
 class Extractor(TMJob):
 
     def run(self):
         
-        file_url = self.config.get('file_url')
-        return self.fetch_via_http(file_url)
+        extract_config = self.config.get('extract')
+        
+        if extract_config.get('protocol') == 'http':
+            return self.fetch_via_http(extract_config.get('url'))
+        else:
+            logger.error("Unrecognised protocol %s" % extract_config.get('protocol'))   
+            return False 
 
     def fetch_via_http(self, file_url):
     
@@ -57,9 +59,40 @@ class Transformer(TMJob):
     def run(self, extractor_response):
     
         file_name = extractor_response.get('file_name')
-        return self.transform_geojson(file_name)
-    
-    def transform_geojson(self, file_name):
+        file_format = self.config.get('transform').get('format')
+        schema = self.config.get('transform').get('schema')
+        
+        # re-organise schema into dictionary
+        map_schema = {}
+        for field in schema:
+            original_field = field.get('source_field_name')
+            map_schema[original_field] = field
+            
+        # open file
+        data = self.open_file(file_name)
+            
+        # do data transformation
+        if file_format == 'geojson':
+            transformed_data = self.transform_geojson(data, map_schema)
+        else:
+            logger.error("Unknown file format %s " % file_format)
+            return False
+        
+        # response
+        return {
+            'map_data' : transformed_data,
+            'file_name' : file_name,
+            'map_schema' : map_schema,
+        }
+            
+    def open_file(self, file_name):
+        
+        # Open source file
+        with open('data/%s' % file_name) as f:
+            data = json.load(f)
+        return data
+            
+    def transform_geojson(self, data, schema):
     
         '''
         Transform map data in file according to schema.
@@ -67,13 +100,7 @@ class Transformer(TMJob):
     
         logger.info("Transforming data according to schema")
         
-        # Get schema
-        schema = self.config.get('schema')
         transformed_data = []
-        
-        # Open source file
-        with open('data/%s' % file_name) as f:
-            data = json.load(f)
         
         # Transform each row
         for row in data.get('features'):
@@ -81,18 +108,16 @@ class Transformer(TMJob):
                 'longitude' : row.get('geometry', {}).get('coordinates', {})[0],
                 'latitude' : row.get('geometry', {}).get('coordinates', {})[1],
             }
+            
             for field, value in row.get('properties').items():
                 if field not in schema.keys():
                     continue
                 else:
-                    new_field_name = schema[field].get('name')
-                    new_row[new_field_name] = value 
+                    new_field_name = schema[field].get('target_field_name')
+                    new_row[new_field_name] = value
             transformed_data.append(new_row)
         
-        return {
-            'map_data' : transformed_data,
-            'file_name' : file_name,
-        }
+        return transformed_data
 
 
 class Loader(TMJob):
@@ -101,8 +126,15 @@ class Loader(TMJob):
         
         map_data = transformer_response.get('map_data')
         file_name = transformer_response.get('file_name')
+        map_schema = transformer_response.get('map_schema')
         
-        new_map = self.initialise_map(file_name)
+        map_config = {
+            'owner': self.config.get('load').get('owner'),
+            'definition': self.config.get('load').get('definition'),
+            'schema': map_schema
+        }
+        
+        new_map = self.initialise_map(file_name, map_config)
         self.save_map(new_map, map_data)
 
     def save_map(self, new_map, map_data):
@@ -146,27 +178,28 @@ class Loader(TMJob):
                     
         logger.info("Done!")
         
-    def initialise_map(self, file_name):
+    def initialise_map(self, file_name, map_config):
     
         ''' 
         Save new map instance metadata to database as needed.
         '''
         
+        
         # Map Owner (if necessary)
-        map_owner = self.session.query(orm.MapOwner).filter_by(name=self.config.get('owner')).first()
+        map_owner = self.session.query(orm.MapOwner).filter_by(name=map_config.get('owner')).first()
         
         if not map_owner:
-            logger.info("Saving new map owner %s" % self.config.get('owner'))
-            map_owner = orm.MapOwner(name=self.config.get('owner'))
+            logger.info("Saving new map owner %s" % map_config.get('owner'))
+            map_owner = orm.MapOwner(name=map_config.get('owner'))
             self.session.add(map_owner)
             
         # Map Definition (if necessary)
-        map_definition = self.session.query(orm.MapDefinition).filter_by(name=self.config.get('definition')).first()
+        map_definition = self.session.query(orm.MapDefinition).filter_by(name=map_config.get('definition')).first()
         
         if not map_definition:
-            logger.info("Saving new map definition %s" % self.config.get('definition'))
+            logger.info("Saving new map definition %s" % map_config.get('definition'))
             map_definition = orm.MapDefinition(
-                name=self.config.get('definition'),
+                name=map_config.get('definition'),
                 owner=map_owner,
             )
             self.session.add(map_definition)
@@ -190,11 +223,12 @@ class Loader(TMJob):
         
         # Schema Fields
         logger.info("Saving schema fields")
-        for field, field_meta in self.config.get('schema', {}).items():
+        for field, field_meta in map_config.get('schema').items():
+
             new_field = orm.SchemaField(
                 is_base_field = False,
                 schema = schema,
-                field_name = field_meta.get('name'),
+                field_name = field_meta.get('target_field_name'),
                 field_type = field_meta.get('type'),
                 field_description = field_meta.get('description'),
             )
@@ -218,23 +252,32 @@ if __name__ == "__main__":
 
     results = parser.parse_args()
     
+    # Load YAML map config file
+    # Job config is stored in self.config
+    with open(results.input_file, 'r') as f:
+        config = yaml.load(f)
+    
     # Set up logging
     logging.config.fileConfig("logging.conf")
     logger = logging.getLogger("Transformap")
     
-    job_config = results.input_file
-    
     # Fetch and save file
-    EX = Extractor(job_config)
+    EX = Extractor(config)
     extractor_response = EX.run()
     
     # Transform data
-    TR = Transformer(job_config)
-    transformer_response = TR.run(extractor_response)
+    TR = Transformer(config)
+    if extractor_response:
+        transformer_response = TR.run(extractor_response)
+    else:
+        sys.exit(1)
     
     # Load data into database
-    LD = Loader(job_config)
-    LD.run(transformer_response)
+    LD = Loader(config)
+    if transformer_response:
+        LD.run(transformer_response)
+    else:
+        sys.exit(1)
     
     
     
