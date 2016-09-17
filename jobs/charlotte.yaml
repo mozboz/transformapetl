@@ -1,9 +1,9 @@
 --- 
 extract: 
-  protocol: http
+  type: http
   url: "http://clt.charlotte.opendata.arcgis.com/datasets/f86744fe094640daaebd047522243a24_0.geojson"
 transform: 
-  format: geojson
+  type: geojson
   schema: 
     - 
       description: "Creator of work"

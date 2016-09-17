@@ -42,13 +42,13 @@ if __name__ == "__main__":
         sys.exit(1)
     
     # Extract
-    p = config.get('extract').get('protocol')
+    p = config.get('extract').get('type')
     p = p[0].upper() + p[1:].lower()
     EX = eval('Extract%s' % p)(config)
     extractor_response = EX.run()
     
     # Transform
-    f = config.get('transform').get('format')
+    f = config.get('transform').get('type')
     f = f[0].upper() + f[1:].lower()
     TR = eval('Transform%s' % f)(config)
     
