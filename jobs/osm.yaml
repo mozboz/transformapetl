@@ -1,0 +1,31 @@
+--- 
+extract: 
+  type: http
+  url: "http://overpass-api.de/api/interpreter?data=%2F*%0AThis%20has%20been%20generated%20by%20the%20overpass-turbo%20wizard.%0AThe%20original%20search%20was%3A%0A%E2%80%9Corganic%3D*%E2%80%9D%0A*%2F%0A%5Bout%3Ajson%5D%5Btimeout%3A25%5D%3B%0A%2F%2F%20gather%20results%0A%28%0A%20%20%2F%2F%20query%20part%20for%3A%20%E2%80%9Corganic%3D*%E2%80%9D%0A%20%20node%5B%22organic%22%5D%2847.85371697106819%2C11.416168212890625%2C48.68824070611104%2C12.45849609375%29%3B%0A%20%20way%5B%22organic%22%5D%2847.85371697106819%2C11.416168212890625%2C48.68824070611104%2C12.45849609375%29%3B%0A%20%20relation%5B%22organic%22%5D%2847.85371697106819%2C11.416168212890625%2C48.68824070611104%2C12.45849609375%29%3B%0A%29%3B%0A%2F%2F%20print%20results%0Aout%20body%3B%0A%3E%3B%0Aout%20skel%20qt%3B"
+transform: 
+  source: osm
+  format: json
+  schema: 
+    - 
+      description: "Type of business"
+      type: Text
+      source_field_name: shop
+      target_field_name: Business
+    - 
+      description: "City"
+      type: Text
+      source_field_name: addr:city
+      target_field_name: City
+    - 
+      description: "Name of business"
+      type: Text
+      source_field_name: name
+      target_field_name: Name
+    -
+      description: "Wheelchair accessible?"
+      type: Text
+      source_field_name: wheelchair
+      target_field_name: wheelchair_accessible
+load:
+    definition: "Convergir map"
+    owner: "Convergir"
