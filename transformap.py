@@ -8,12 +8,11 @@ import json
 import argparse
 import yaml
 import sys
+import importlib
 
 from sqlalchemy import exists
 from datetime import datetime
 
-from transformap.extract import ExtractHttp
-from transformap.transform import TransformGeojson
 from transformap.load import Load
 
 
@@ -44,14 +43,20 @@ if __name__ == "__main__":
     # Extract
     p = config.get('extract').get('type')
     p = p[0].upper() + p[1:].lower()
-    EX = eval('Extract%s' % p)(config)
+    
+    module = importlib.import_module('transformap.extract')
+    class_ = getattr(module, 'Extract%s' % p)
+    EX = class_(config)
     extractor_response = EX.run()
     
     # Transform
-    f = config.get('transform').get('type')
-    f = f[0].upper() + f[1:].lower()
-    TR = eval('Transform%s' % f)(config)
+    p = config.get('transform').get('type')
+    p = p[0].upper() + p[1:].lower()
     
+    module = importlib.import_module('transformap.transform')
+    class_ = getattr(module, 'Transform%s' % p)
+    TR = class_(config)
+
     if extractor_response:
         transformer_response = TR.run(extractor_response)
     else:

@@ -11,12 +11,12 @@ transform:
       source_field_name: Artist
       target_field_name: Artist
     - 
-      description: "Creator of work"
+      description: "Type of work"
       type: Text
       source_field_name: CategoryMainType
       target_field_name: Type
     - 
-      description: "Creator of work"
+      description: "Title of work"
       type: Text
       source_field_name: TitleOfWork
       target_field_name: Title

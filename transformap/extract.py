@@ -2,14 +2,7 @@
 # coding: utf-8
 
 import urllib
-from job import TMJob
-
-
-class Extract(TMJob):
-    
-    def __init__(self, config):
-        self.setup_logging('Extrac')
-        super(Extract, self).__init__(config)
+from jobs import Extract
 
 
 class ExtractHttp(Extract):
