@@ -2,15 +2,8 @@
 # coding: utf-8
 
 import urllib
-from job import TMJob
-
-
-class Extract(TMJob):
-    
-    def __init__(self, config):
-        self.setup_logging('Extrac')
-        super(Extract, self).__init__(config)
-
+from jobs import Extract
+import time
 
 class ExtractHttp(Extract):
 
@@ -19,16 +12,18 @@ class ExtractHttp(Extract):
     '''
 
     def run(self):
-    
+
         file_url = self.config.get('extract').get('url')
         
-        geojson_file = urllib.URLopener()
-        file_name = '%s' % file_url.strip('/').split('/')[-1]
+        format = self.config.get('transform').get('format')
+        source = self.config.get('transform').get('source')
+        file_name = '%s_%s.%s' % (source, int(time.time()), format)
         
-        self.logger.info("Retrieving file %s" % file_name)
+        self.logger.info("Saving file %s" % file_name)
         
         try:
-            geojson_file.retrieve(file_url, 'data/%s' % file_name)
+            source_file = urllib.URLopener()
+            source_file.retrieve(file_url, 'data/%s' % file_name)
         except IOError:
             self.logger.error("IOError: Unable to retrieve file from %s" % file_url)
             return False

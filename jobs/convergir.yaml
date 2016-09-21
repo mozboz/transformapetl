@@ -1,0 +1,26 @@
+--- 
+extract: 
+  type: http
+  url: "http://redeconvergir.net/api/v1/initiatives"
+transform: 
+  source: convergir
+  format: json
+  schema: 
+    - 
+      description: "Name of place"
+      type: Text
+      source_field_name: name
+      target_field_name: Name
+    - 
+      description: "Country"
+      type: Text
+      source_field_name: countryCode
+      target_field_name: Country
+    - 
+      description: "Name of contact"
+      type: Text
+      source_field_name: contactName
+      target_field_name: Contact
+load:
+    definition: "Convergir map"
+    owner: "Convergir"
