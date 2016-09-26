@@ -2,8 +2,10 @@
 # coding: utf-8
 
 import urllib
-from jobs import Extract
 import time
+
+from _jobs import Extract
+
 
 class ExtractHttp(Extract):
 
@@ -12,6 +14,10 @@ class ExtractHttp(Extract):
     '''
 
     def run(self):
+    
+        return {
+            'file_name' : 'datagov_1474278205.geojson',
+        }
 
         file_url = self.config.get('extract').get('url')
         
