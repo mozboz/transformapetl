@@ -20,11 +20,10 @@ See: https://docs.djangoproject.com/en/1.10/ref/contrib/postgres/fields/#contain
 
 ## Usage
 
-python manage.py transformap -i jobs/jobfile.json
+    python manage.py transformap -i jobs/jobfile.json
 
 Admin interface: /admin
 API URL: /places-api/
-
 New jobs should be created as .YAML files in jobs/
 
 ## Misc
