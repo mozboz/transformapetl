@@ -14,10 +14,6 @@ class ExtractHttp(Extract):
     '''
 
     def run(self):
-    
-        return {
-            'file_name' : 'datagov_1474278205.geojson',
-        }
 
         file_url = self.config.get('extract').get('url')
         
