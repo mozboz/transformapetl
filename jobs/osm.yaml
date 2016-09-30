@@ -27,5 +27,5 @@ transform:
       source_field_name: wheelchair
       target_field_name: wheelchair_accessible
 load:
-    definition: "Convergir map"
-    owner: "Convergir"
+    definition: "OSM map"
+    owner: "OSM"

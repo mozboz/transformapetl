@@ -4,7 +4,7 @@
 import urllib
 import json
 
-from jobs import Transform
+from _jobs import Transform
 
 
 class TransformDatagovGeojson(Transform):       
@@ -25,17 +25,19 @@ class TransformDatagovGeojson(Transform):
         
         # Transform each row
         for row in data.get('features'):
+
             new_row = {
                 'longitude' : '{0:.10f}'.format(row.get('geometry', {}).get('coordinates', {})[0]),
                 'latitude' : '{0:.10f}'.format(row.get('geometry', {}).get('coordinates', {})[1]),
             }
-            
+
             for field, value in row.get('properties').items():
                 if field not in schema.keys():
                     continue
                 else:
                     new_field_name = schema[field].get('target_field_name')
                     new_row[new_field_name] = value
+
             transformed_data.append(new_row)
         
         # response
@@ -103,16 +105,16 @@ class TransformOsmJson(Transform):
         self.logger.info("Transforming data according to schema")
         
         transformed_data = []
-        
+
         # Transform each row
         for row in data.get('elements', []):
-
+        
             # dont' save objects without coordinates
-            if not row.get('long') or not row.get('lat'):
+            if not row.get('lon') or not row.get('lat'):
                 continue
 
             new_row = {
-                'longitude' : row.get('long'),
+                'longitude' : row.get('lon'),
                 'latitude' : row.get('lat'),
             }
             

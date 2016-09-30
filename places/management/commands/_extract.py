@@ -2,8 +2,10 @@
 # coding: utf-8
 
 import urllib
-from jobs import Extract
 import time
+
+from _jobs import Extract
+
 
 class ExtractHttp(Extract):
 
