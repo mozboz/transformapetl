@@ -15,28 +15,8 @@ class MapOwnerViewSet(viewsets.ModelViewSet):
     queryset = MapOwner.objects.all()
     serializer_class = MapOwnerSerializer
     
-# Map Instance
 
-class MapInstanceSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = MapInstance
-        fields = ('schema', 'map_definition', 'date_created', 'date_modified')
 
-class MapInstanceViewSet(viewsets.ModelViewSet):
-    queryset = MapInstance.objects.all()
-    serializer_class = MapInstanceSerializer
-    
-# Map Object
-
-class MapObjectSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = MapObject
-        fields = ('guid', 'map_instance', 'longitude', 'latitude', 'date_created', 'date_modified')
-
-class MapObjectViewSet(viewsets.ModelViewSet):
-    queryset = MapObject.objects.all()
-    serializer_class = MapObjectSerializer
-    
 # Map Data
 
 class MapDataSerializer(serializers.HyperlinkedModelSerializer):
@@ -47,6 +27,48 @@ class MapDataSerializer(serializers.HyperlinkedModelSerializer):
 class MapDataViewSet(viewsets.ModelViewSet):
     queryset = MapData.objects.all()
     serializer_class = MapDataSerializer
+    
+
+
+# Map Instance (lite)
+
+class MapInstanceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MapInstance
+        fields = ('id', 'schema', 'map_definition', 'date_created', 'date_modified',)
+
+class MapInstanceViewSet(viewsets.ModelViewSet):
+    queryset = MapInstance.objects.all()
+    serializer_class = MapInstanceSerializer
+    
+    
+# Map Instance (verbose)
+
+class MapInstanceVerboseSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MapInstance
+        depth = 2
+        fields = ('id', 'schema', 'map_definition', 'date_created', 'date_modified', 'mapdata_set')
+
+class MapInstanceVerboseViewSet(viewsets.ModelViewSet):
+    queryset = MapInstance.objects.all()
+    serializer_class = MapInstanceVerboseSerializer
+    
+
+
+
+# Map Object
+
+class MapObjectSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = MapObject
+        fields = ('guid', 'map_instance', 'longitude', 'latitude', 'date_created', 'date_modified')
+
+class MapObjectViewSet(viewsets.ModelViewSet):
+    queryset = MapObject.objects.all()
+    serializer_class = MapObjectSerializer
 
 # Map Definition
 
@@ -88,6 +110,7 @@ router = routers.DefaultRouter()
 
 router.register('map_owners', MapOwnerViewSet)
 router.register('map_instance', MapInstanceViewSet)
+router.register('map_instance_verbose', MapInstanceVerboseViewSet)
 router.register('map_object', MapObjectViewSet)
 router.register('map_data', MapDataViewSet)
 router.register('map_definition', MapDefinitionViewSet)
