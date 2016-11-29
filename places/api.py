@@ -41,22 +41,6 @@ class MapInstanceSerializer(serializers.ModelSerializer):
 class MapInstanceViewSet(viewsets.ModelViewSet):
     queryset = MapInstance.objects.all()
     serializer_class = MapInstanceSerializer
-    
-    
-# Map Instance (verbose)
-
-class MapInstanceVerboseSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = MapInstance
-        depth = 2
-        fields = ('id', 'schema', 'map_definition', 'date_created', 'date_modified', 'mapdata_set')
-
-class MapInstanceVerboseViewSet(viewsets.ModelViewSet):
-    queryset = MapInstance.objects.all()
-    serializer_class = MapInstanceVerboseSerializer
-    
-
 
 
 # Map Object
@@ -110,7 +94,6 @@ router = routers.DefaultRouter()
 
 router.register('map_owners', MapOwnerViewSet)
 router.register('map_instance', MapInstanceViewSet)
-router.register('map_instance_verbose', MapInstanceVerboseViewSet)
 router.register('map_object', MapObjectViewSet)
 router.register('map_data', MapDataViewSet)
 router.register('map_definition', MapDefinitionViewSet)
