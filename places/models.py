@@ -49,7 +49,7 @@ class MapInstance(models.Model):
     date_modified = models.DateTimeField(auto_now=True)
     
     def __unicode__(self):
-        return u'%s' % self.map_definition
+        return u'%s %s' % (self.map_definition, self.id)
 
     class Meta:
         db_table = 'map_instances'

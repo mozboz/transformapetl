@@ -15,28 +15,8 @@ class MapOwnerViewSet(viewsets.ModelViewSet):
     queryset = MapOwner.objects.all()
     serializer_class = MapOwnerSerializer
     
-# Map Instance
 
-class MapInstanceSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = MapInstance
-        fields = ('schema', 'map_definition', 'date_created', 'date_modified')
 
-class MapInstanceViewSet(viewsets.ModelViewSet):
-    queryset = MapInstance.objects.all()
-    serializer_class = MapInstanceSerializer
-    
-# Map Object
-
-class MapObjectSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = MapObject
-        fields = ('guid', 'map_instance', 'longitude', 'latitude', 'date_created', 'date_modified')
-
-class MapObjectViewSet(viewsets.ModelViewSet):
-    queryset = MapObject.objects.all()
-    serializer_class = MapObjectSerializer
-    
 # Map Data
 
 class MapDataSerializer(serializers.HyperlinkedModelSerializer):
@@ -47,6 +27,32 @@ class MapDataSerializer(serializers.HyperlinkedModelSerializer):
 class MapDataViewSet(viewsets.ModelViewSet):
     queryset = MapData.objects.all()
     serializer_class = MapDataSerializer
+    
+
+
+# Map Instance (lite)
+
+class MapInstanceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MapInstance
+        fields = ('id', 'schema', 'map_definition', 'date_created', 'date_modified',)
+
+class MapInstanceViewSet(viewsets.ModelViewSet):
+    queryset = MapInstance.objects.all()
+    serializer_class = MapInstanceSerializer
+
+
+# Map Object
+
+class MapObjectSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = MapObject
+        fields = ('guid', 'map_instance', 'longitude', 'latitude', 'date_created', 'date_modified')
+
+class MapObjectViewSet(viewsets.ModelViewSet):
+    queryset = MapObject.objects.all()
+    serializer_class = MapObjectSerializer
 
 # Map Definition
 
